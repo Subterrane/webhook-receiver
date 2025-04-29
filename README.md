@@ -1,31 +1,81 @@
-# Node.js Hello World
+# Webhook Receiver
 
-Simple Node.js + Vercel example that returns a "Hello World" response.
+A secure TypeScript-based webhook receiver built for Vercel's serverless platform. This service provides a simple endpoint that logs and processes incoming webhook payloads with proper error handling and security headers.
 
-## How to Use
+## Features
 
-You can choose from one of the following two methods to use this repository:
+- Built with TypeScript for type safety
+- Secure headers and request validation
+- Detailed logging with timestamps
+- Error handling and proper HTTP status codes
+- Vercel serverless deployment ready
 
-### One-Click Deploy
+## Prerequisites
 
-Deploy the example using [Vercel](https://vercel.com?utm_source=github&utm_medium=readme&utm_campaign=vercel-examples):
+- Node.js (Latest LTS version recommended)
+- npm (comes with Node.js)
+- Vercel CLI (optional for local development)
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/git/external?repository-url=https://github.com/vercel/examples/tree/main/solutions/node-hello-world&project-name=node-hello-world&repository-name=node-hello-world)
+## Getting Started
 
-### Clone and Deploy
+1. Clone the repository:
+   ```bash
+   git clone <your-repo-url>
+   cd webhook-receiver
+   ```
 
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Run locally:
+   ```bash
+   npm run dev
+   ```
+
+4. Deploy to Vercel:
+   ```bash
+   npm run deploy
+   ```
+
+## Usage
+
+Send POST requests to your deployed webhook URL with JSON payloads. The service will:
+- Validate the request method (only POST allowed)
+- Log the incoming webhook data
+- Process the payload
+- Return appropriate status codes and responses
+
+Example curl request:
 ```bash
-git clone https://github.com/vercel/examples/tree/main/solutions/node-hello-world
+curl -X POST \
+  https://your-vercel-url/api \
+  -H 'Content-Type: application/json' \
+  -d '{"event": "test", "data": "Hello World"}'
 ```
 
-Install the Vercel CLI:
+## Security
 
-```bash
-npm i -g vercel
-```
+The service implements several security measures:
+- Content-Type validation
+- HTTP method validation
+- Security headers (X-Content-Type-Options, X-Frame-Options, CSP)
+- Error message sanitization
 
-Then run the app at the root of the repository:
+## Development
 
-```bash
-vercel dev
-```
+The project uses TypeScript for better type safety and developer experience. The main webhook handler is in `api/index.ts`.
+
+## Scripts
+
+- `npm run dev` - Run the development server locally
+- `npm run build` - Build the TypeScript project
+- `npm run deploy` - Deploy to Vercel
+
+## License
+
+MIT
+
+---
+Last updated: 2024
