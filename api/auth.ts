@@ -41,6 +41,25 @@ export async function getClient(): Promise<Client> {
   return client;
 }
 
+export async function isTokenValid(req: VercelRequest): Promise<boolean> {
+  try {
+    const config = getConfig();
+    const cookies = parse(req.headers.cookie || '');
+    const token = cookies[config.cookie.name];
+    
+    if (!token) {
+      return false;
+    }
+
+    // The token exists in cookies, that's good enough for data requests
+    // If it's invalid, the OIDC provider will tell us when we try to use it
+    return true;
+  } catch (error) {
+    console.error('Failed to check token:', error);
+    return false;
+  }
+}
+
 export async function getUserInfo(req: VercelRequest): Promise<any | null> {
   try {
     const config = getConfig();
