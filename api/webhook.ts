@@ -1,5 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Redis } from '@upstash/redis';
+import { EventData } from './types';
 
 // Initialize Redis client
 const redis = new Redis({
@@ -16,7 +17,7 @@ interface StoredEvent {
 const MAX_EVENTS = 10;
 const EVENTS_KEY = 'webhookEvents';
 
-export const getEvents = async () => {
+export const getEvents = async (): Promise<{ events: EventData[] }> => {
   try {
     console.log('Attempting to fetch events from Redis...');
     const events = await redis.lrange<StoredEvent>(EVENTS_KEY, 0, MAX_EVENTS - 1);
@@ -30,7 +31,8 @@ export const getEvents = async () => {
     return {
       events: events.map(event => ({
         event: event.payload,
-        timestamp: event.timestamp
+        timestamp: event.timestamp,
+        headers: event.headers
       }))
     };
   } catch (error) {

@@ -165,16 +165,6 @@ Note: The webhook endpoint (`/api/webhook`) is public to receive events, but the
    - Performs OneLogin SSO logout
    - Returns to landing page
 
-## Limitations
-
-- Events limited to most recent 10 (older events are automatically purged)
-- Basic event display (no filtering or search)
-- Single user access (no user-specific event views)
-- ISO timestamps (not human-readable format)
-- No webhook signature validation
-- Delayed OIDC responses from OneLogin on initial login
-- No event metadata display (headers, source IP hidden)
-
 ## Troubleshooting
 
 ### Common OneLogin Issues
@@ -197,17 +187,6 @@ Note: The webhook endpoint (`/api/webhook`) is public to receive events, but the
    - Verify Post Logout Redirect URI is configured in OneLogin
    - Check that the URI matches your production URL exactly
    - Ensure cookies are being properly cleared
-
-## Future Improvements
-
-- Historical event storage beyond 10 events
-- User-specific event views
-- Webhook signature validation
-- Custom event processing rules
-- Event filtering and search
-- User role-based access control
-- Human-readable timestamps
-- Event metadata display (headers, source IP)
 
 ## License
 
