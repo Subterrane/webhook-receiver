@@ -167,10 +167,13 @@ Note: The webhook endpoint (`/api/webhook`) is public to receive events, but the
 
 ## Limitations
 
-- Only shows the most recent event (historical events not stored)
+- Events limited to most recent 10 (older events are automatically purged)
+- Basic event display (no filtering or search)
 - Single user access (no user-specific event views)
-- Basic event format validation
-- No webhook signature validation yet
+- ISO timestamps (not human-readable format)
+- No webhook signature validation
+- Delayed OIDC responses from OneLogin on initial login
+- No event metadata display (headers, source IP hidden)
 
 ## Troubleshooting
 
