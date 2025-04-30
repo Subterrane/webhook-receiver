@@ -197,13 +197,14 @@ Note: The webhook endpoint (`/api/webhook`) is public to receive events, but the
 
 ## Future Improvements
 
-- Persistent storage for events (e.g., MongoDB, Redis)
-- Multiple event history
+- Historical event storage beyond 10 events
 - User-specific event views
 - Webhook signature validation
 - Custom event processing rules
 - Event filtering and search
 - User role-based access control
+- Human-readable timestamps
+- Event metadata display (headers, source IP)
 
 ## License
 
@@ -214,4 +215,4 @@ MIT
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
 ---
-Last updated: 2024
+Last updated: 2025
