@@ -12,6 +12,8 @@ A secure TypeScript-based webhook receiver built for Vercel's serverless platfor
 - Error handling and proper HTTP status codes
 - Vercel serverless deployment ready
 - Auto-refreshing dashboard interface
+- User information display from OneLogin
+- Complete Single Sign-On (SSO) logout flow
 
 ## Prerequisites
 
@@ -22,26 +24,7 @@ A secure TypeScript-based webhook receiver built for Vercel's serverless platfor
 
 ## Setup
 
-### 1. OneLogin Configuration
-
-1. Log into your OneLogin admin console
-2. Create a new OpenID Connect application:
-   - Go to Applications > Add App
-   - Search for "OpenID Connect"
-   - Give your application a name (e.g., "Webhook Receiver")
-3. Configure the application:
-   - In the "Configuration" tab:
-     - Application Type: "Web"
-     - Token Endpoint Authentication Method: "POST"
-   - In the "SSO" tab:
-     - Redirect URI: `https://your-vercel-domain/api/callback`
-     - Login URL: `https://your-vercel-domain/api/login`
-4. Note down the following credentials:
-   - Client ID
-   - Client Secret
-   - Issuer URL (usually `https://your-subdomain.onelogin.com/oidc/2`)
-
-### 2. Local Development Setup
+### 1. Initial Project Setup
 
 1. Clone the repository:
    ```bash
@@ -54,45 +37,72 @@ A secure TypeScript-based webhook receiver built for Vercel's serverless platfor
    npm install
    ```
 
-3. Set up local environment variables:
-   Create a `.env` file with:
-   ```
-   ONELOGIN_ISSUER=your_issuer_url
-   ONELOGIN_CLIENT_ID=your_client_id
-   ONELOGIN_CLIENT_SECRET=your_client_secret
-   ```
-
-4. Run locally:
-   ```bash
-   npm run dev
-   ```
-
-### 3. Vercel Deployment
+### 2. Vercel Setup
 
 1. Install Vercel CLI if you haven't:
    ```bash
    npm install -g vercel
    ```
 
-2. Set up environment variables in Vercel:
-   ```bash
-   npx vercel env add ONELOGIN_ISSUER
-   npx vercel env add ONELOGIN_CLIENT_ID
-   npx vercel env add ONELOGIN_CLIENT_SECRET
-   ```
-
-3. Deploy to Vercel:
+2. Deploy to Vercel to get your production URL:
    ```bash
    npx vercel deploy
    ```
+
+3. List your deployments to get your production URL:
+   ```bash
+   npx vercel ls webhook-receiver
+   ```
+   Note down your production URL (e.g., `webhook-receiver.vercel.app`)
+
+### 3. OneLogin Configuration
+
+1. Log into your OneLogin admin console
+2. Go to Applications > Add App > OpenID Connect
+3. Give your application a name (e.g., "Webhook Receiver")
+
+4. In the Configuration tab, set:
+   - Login URL: `https://your-production-url/api/login`
+     Example: `https://webhook-receiver.vercel.app/api/login`
+   - Redirect URIs: `https://your-production-url/api/callback`
+     Example: `https://webhook-receiver.vercel.app/api/callback`
+   - Post Logout Redirect URIs: `https://your-production-url/api`
+     Example: `https://webhook-receiver.vercel.app/api`
+
+5. In the SSO tab, note down:
+   - Client ID
+   - Client Secret
+   - Issuer URL (usually `https://your-subdomain.onelogin.com/oidc/2`)
+
+### 4. Environment Variables Setup
+
+Set up your environment variables in Vercel:
+
+```bash
+npx vercel env add ONELOGIN_ISSUER      # Your OneLogin Issuer URL from SSO tab
+npx vercel env add ONELOGIN_CLIENT_ID    # Your OneLogin Client ID from SSO tab
+npx vercel env add ONELOGIN_CLIENT_SECRET # Your OneLogin Client Secret from SSO tab
+npx vercel env add VERCEL_URL_OVERRIDE   # Your production URL without https:// prefix
+```
+
+### 5. Final Deployment
+
+Deploy to production:
+```bash
+npx vercel --prod
+```
 
 ## Usage
 
 ### Viewing Webhooks
 
-1. Visit your deployed application URL
+1. Visit your dashboard at `https://your-production-url/api`
+   Example: `https://webhook-receiver.vercel.app/api`
 2. Log in with your OneLogin credentials
-3. The dashboard will show the most recent webhook event and auto-refresh every 5 seconds
+3. The dashboard will show:
+   - Your user information (name/email)
+   - The most recent webhook event
+   - Auto-refresh every 5 seconds
 
 ### Sending Webhooks
 
@@ -100,25 +110,15 @@ Send POST requests to the webhook endpoint:
 
 ```bash
 curl -X POST \
-  https://your-vercel-url/api/webhook \
+  https://your-production-url/api/webhook \
   -H 'Content-Type: application/json' \
   -d '{"event": "test", "data": "Hello World"}'
 ```
 
 Note: The webhook endpoint (`/api/webhook`) is public to receive events, but the dashboard is protected by authentication.
 
-## Security Features
+## Project Structure
 
-- OneLogin OIDC authentication for the dashboard
-- HTTP-only secure cookies for session management
-- Content-Type validation
-- HTTP method validation
-- Security headers (X-Content-Type-Options, X-Frame-Options, CSP)
-- Error message sanitization
-
-## Development
-
-The project structure:
 - `/api/index.ts` - Dashboard frontend and event display
 - `/api/webhook.ts` - Webhook receiver endpoint
 - `/api/login.ts` - OneLogin authentication initiation
@@ -127,17 +127,55 @@ The project structure:
 - `/api/auth.ts` - Authentication utilities
 - `/api/config.ts` - Configuration settings
 
-## Available Scripts
+## Authentication Flow
 
-- `npm run dev` - Run the development server locally
-- `npm run build` - Build the TypeScript project
-- `npm run deploy` - Deploy to Vercel
+1. Landing Page:
+   - Public access at `/api`
+   - Shows login button and basic information
+
+2. Login:
+   - Redirects to OneLogin
+   - Uses OIDC authentication
+   - Returns user to dashboard
+
+3. Dashboard:
+   - Shows user information from OneLogin
+   - Displays webhook events
+   - Protected by authentication
+
+4. Logout:
+   - Clears local session
+   - Performs OneLogin SSO logout
+   - Returns to landing page
 
 ## Limitations
 
 - In-memory event storage (events are lost on deployment/restart)
 - Only shows the most recent event
 - Single user access (no user-specific event views)
+
+## Troubleshooting
+
+### Common OneLogin Issues
+
+1. "invalid_client" errors:
+   - Double-check Client ID and Client Secret
+   - Make sure they're correctly set in Vercel environment variables
+   - Verify there are no extra spaces in the credentials
+
+2. "redirect_uri_mismatch" errors:
+   - Verify the callback URL in OneLogin matches exactly with your Vercel URL
+   - Check VERCEL_URL_OVERRIDE is set correctly
+   - Make sure you're using the production URL, not a preview URL
+
+3. Access Issues:
+   - Make sure your user has been assigned access to the application in OneLogin
+   - Check that the application is enabled in OneLogin
+
+4. Logout Issues:
+   - Verify Post Logout Redirect URI is configured in OneLogin
+   - Check that the URI matches your production URL exactly
+   - Ensure cookies are being properly cleared
 
 ## Future Improvements
 
@@ -146,6 +184,8 @@ The project structure:
 - User-specific event views
 - Webhook signature validation
 - Custom event processing rules
+- Event filtering and search
+- User role-based access control
 
 ## License
 

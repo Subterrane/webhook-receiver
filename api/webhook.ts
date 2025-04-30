@@ -1,5 +1,13 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { setLastEvent } from './index';
+
+// Store the last event in memory (note: this will reset on each deploy)
+let lastEvent: any = null;
+let lastEventTime: string | null = null;
+
+export const getLastEvent = () => ({
+  event: lastEvent,
+  timestamp: lastEventTime
+});
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Only allow POST method
@@ -16,11 +24,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const payload = req.body;
     
     // Store the event
-    setLastEvent(payload);
+    lastEvent = payload;
+    lastEventTime = new Date().toISOString();
     
-    // Log the received webhook with timestamp
+    // Log the received webhook
     console.log('[Webhook received]', {
-      timestamp: new Date().toISOString(),
+      timestamp: lastEventTime,
       headers: req.headers,
       payload
     });
@@ -30,13 +39,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       message: 'Webhook received'
     });
   } catch (error) {
-    console.error('[Webhook Error]', {
-      timestamp: new Date().toISOString(),
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-
+    console.error('Webhook Error:', error);
     return res.status(500).json({ 
-      error: 'Internal server error'
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 }
