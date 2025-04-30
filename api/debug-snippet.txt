@@ -1,0 +1,49 @@
+// Add this just after the last </style> tag in renderDashboard
+<script>
+    // Auto-refresh the page every 5 seconds
+    setTimeout(() => {
+        window.location.reload();
+    }, 5000);
+
+    // Log refresh events
+    console.log('Dashboard refreshed at:', new Date().toISOString());
+
+    // Add a visual indicator of refreshes
+    function updateRefreshTime() {
+        const el = document.getElementById('last-refresh');
+        if (el) {
+            el.textContent = new Date().toLocaleTimeString();
+        }
+    }
+    updateRefreshTime();
+</script>
+</head>
+<body>
+    <div class="container">
+        <h1>Webhook Receiver Dashboard</h1>
+        <div class="user-info">
+            <div class="user-name">${userName}</div>
+            <a href="/api/logout" class="logout">Logout</a>
+        </div>
+        
+        <div style="text-align: right; font-size: 0.8em; color: #666;">
+            Last refresh: <span id="last-refresh"></span>
+        </div>
+        
+        ${event ? `
+            <div class="event-container">
+                <div class="timestamp">Last event received: ${timestamp}</div>
+                <pre>${JSON.stringify(event, null, 2)}</pre>
+            </div>
+        ` : `
+            <div class="no-events">
+                No webhook events received yet.
+                <div style="font-size: 0.8em; margin-top: 10px;">
+                    Try sending one with:
+                    <pre>curl -X POST \\
+  https://${req.headers.host}/api/webhook \\
+  -H 'Content-Type: application/json' \\
+  -d '{"event": "test", "data": "Hello World"}'</pre>
+                </div>
+            </div>
+        `}

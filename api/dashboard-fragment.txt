@@ -1,0 +1,69 @@
+// ... [previous styles remain the same] ...
+
+    <script>
+        function updateDisplay() {
+            // Get count from localStorage or start at 0
+            let refreshCount = parseInt(localStorage.getItem('refreshCount') || '0');
+            refreshCount++;
+            
+            // Store updated count
+            localStorage.setItem('refreshCount', refreshCount.toString());
+            
+            // Update display
+            const countEl = document.getElementById('refresh-count');
+            const timeEl = document.getElementById('refresh-time');
+            if (countEl) {
+                countEl.textContent = refreshCount;
+            }
+            if (timeEl) {
+                timeEl.textContent = new Date().toISOString();
+            }
+        }
+
+        function refresh() {
+            updateDisplay();
+            setTimeout(() => {
+                window.location.reload();
+            }, 5000);
+        }
+
+        // Initialize when page loads
+        window.onload = refresh;
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="header-container">
+            <div class="header-left">
+                <h1>Webhook Receiver Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <div class="user-name">${userName}</div>
+                    <a href="/api/logout" class="logout" onclick="localStorage.removeItem('refreshCount');">Logout</a>
+                </div>
+                <div class="refresh-info">
+                    Page rendered: ${currentTime}<br>
+                    Refresh #<span id="refresh-count">0</span><br>
+                    Last: <span id="refresh-time"></span>
+                </div>
+            </div>
+        </div>
+
+        ${event ? `
+            <div class="event-container">
+                <div class="timestamp">Last event received: ${timestamp}</div>
+                <pre>${JSON.stringify(event, null, 2)}</pre>
+            </div>
+        ` : `
+            <div class="no-events">
+                <p>No webhook events received yet.</p>
+                <div class="debug-info">
+                    <strong>Debug Info:</strong><br>
+                    Checking for events at: ${currentTime}<br>
+                    Redis store checked: true<br>
+                    Got null event: ${!event}<br>
+                    Got null timestamp: ${!timestamp}
+                </div>
+            </div>
+        `}
