@@ -1,9 +1,9 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { getUserInfo } from './auth';
-import { getLastEvent } from './webhook';
+import { getUserInfo, isTokenValid } from './auth';
+import { getEvents } from './webhook';
 import { UserinfoResponse } from 'openid-client';
 
-function renderLandingPage(req: VercelRequest): string {
+function renderLandingPage(): string {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -70,9 +70,9 @@ function renderLandingPage(req: VercelRequest): string {
 }
 
 async function renderDashboard(req: VercelRequest, userInfo: UserinfoResponse): Promise<string> {
-  console.log('Rendering dashboard, fetching last event...');
-  const { event, timestamp } = await getLastEvent();
-  console.log('Got event for dashboard:', { event, timestamp });
+  console.log('Rendering dashboard, fetching events...');
+  const { events } = await getEvents();
+  console.log('Got events for dashboard:', events);
   
   // Serialize user info for client-side storage
   const serializedUserInfo = JSON.stringify(userInfo);
@@ -129,12 +129,18 @@ async function renderDashboard(req: VercelRequest, userInfo: UserinfoResponse): 
             margin-bottom: 5px;
             white-space: nowrap;
         }
+        .events-container {
+            margin: 20px 0;
+        }
         .event-container {
             background: #f8f9fa;
             padding: 15px;
             border-radius: 4px;
             border: 1px solid #dee2e6;
-            margin-top: 20px;
+            margin-bottom: 15px;
+        }
+        .event-container:last-child {
+            margin-bottom: 0;
         }
         .timestamp {
             color: #666;
@@ -147,6 +153,7 @@ async function renderDashboard(req: VercelRequest, userInfo: UserinfoResponse): 
             padding: 15px;
             border-radius: 4px;
             overflow-x: auto;
+            margin: 0;
         }
         .no-events {
             color: #666;
@@ -236,29 +243,35 @@ async function renderDashboard(req: VercelRequest, userInfo: UserinfoResponse): 
 
                 const data = await response.json();
                 let container = document.querySelector('.container');
-                let eventContainer = document.querySelector('.event-container');
+                let eventsContainer = document.querySelector('.events-container');
                 let noEvents = document.querySelector('.no-events');
                 let endpointInfo = document.querySelector('.endpoint-info');
 
-                // Remove existing event or no-event containers
-                if (eventContainer) eventContainer.remove();
+                // Remove existing events or no-event containers
+                if (eventsContainer) eventsContainer.remove();
                 if (noEvents) noEvents.remove();
 
-                if (data.event) {
-                    // Create event container
+                if (data.events && data.events.length > 0) {
+                    // Create events container
                     const newContainer = document.createElement('div');
-                    newContainer.className = 'event-container';
+                    newContainer.className = 'events-container';
                     
-                    // Create timestamp div
-                    const timestampDiv = document.createElement('div');
-                    timestampDiv.className = 'timestamp';
-                    timestampDiv.textContent = 'Last event received: ' + data.timestamp;
-                    newContainer.appendChild(timestampDiv);
-                    
-                    // Create pre element for event data
-                    const pre = document.createElement('pre');
-                    pre.textContent = JSON.stringify(data.event, null, 2);
-                    newContainer.appendChild(pre);
+                    // Add each event
+                    data.events.forEach((eventData, index) => {
+                        const eventElement = document.createElement('div');
+                        eventElement.className = 'event-container';
+                        
+                        const timestampDiv = document.createElement('div');
+                        timestampDiv.className = 'timestamp';
+                        timestampDiv.textContent = \`Event #\${index + 1} received: \${eventData.timestamp}\`;
+                        eventElement.appendChild(timestampDiv);
+                        
+                        const pre = document.createElement('pre');
+                        pre.textContent = JSON.stringify(eventData.event, null, 2);
+                        eventElement.appendChild(pre);
+                        
+                        newContainer.appendChild(eventElement);
+                    });
                     
                     // Insert before endpoint info
                     container.insertBefore(newContainer, endpointInfo);
@@ -277,8 +290,7 @@ async function renderDashboard(req: VercelRequest, userInfo: UserinfoResponse): 
                         <strong>Debug Info:</strong><br>
                         Checking for events at: \${new Date().toISOString()}<br>
                         Redis store checked: true<br>
-                        Got null event: true<br>
-                        Got null timestamp: true
+                        Got null events: true
                     \`;
                     newContainer.appendChild(debugInfo);
                     
@@ -319,10 +331,14 @@ async function renderDashboard(req: VercelRequest, userInfo: UserinfoResponse): 
             </div>
         </div>
 
-        ${event ? `
-            <div class="event-container">
-                <div class="timestamp">Last event received: ${timestamp}</div>
-                <pre>${JSON.stringify(event, null, 2)}</pre>
+        ${events.length > 0 ? `
+            <div class="events-container">
+                ${events.map((evt, index) => `
+                    <div class="event-container">
+                        <div class="timestamp">Event #${index + 1} received: ${evt.timestamp}</div>
+                        <pre>${JSON.stringify(evt.event, null, 2)}</pre>
+                    </div>
+                `).join('')}
             </div>
         ` : `
             <div class="no-events">
@@ -331,8 +347,7 @@ async function renderDashboard(req: VercelRequest, userInfo: UserinfoResponse): 
                     <strong>Debug Info:</strong><br>
                     Checking for events at: ${currentTime}<br>
                     Redis store checked: true<br>
-                    Got null event: ${!event}<br>
-                    Got null timestamp: ${!timestamp}
+                    Got null events: true
                 </div>
             </div>
         `}
@@ -370,9 +385,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(401).json({ error: 'Not authenticated' });
       }
       
-      // Return only the event data
-      const { event, timestamp } = await getLastEvent();
-      return res.status(200).json({ event, timestamp });
+      // Return the events data
+      const { events } = await getEvents();
+      return res.status(200).json({ events });
     } else {
       // For full page loads, get the complete user info
       const userInfo = await getUserInfo(req);
@@ -381,14 +396,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (userInfo) {
         console.log('User authenticated, showing dashboard');
         const dashboard = await renderDashboard(req, userInfo);
-        res.status(200).send(dashboard);
+        return res.status(200).send(dashboard);
       } else {
         console.log('User not authenticated, showing landing page');
-        res.status(200).send(renderLandingPage(req));
+        return res.status(200).send(renderLandingPage());
       }
     }
   } catch (error) {
     console.error('Error in handler:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

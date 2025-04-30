@@ -13,24 +13,29 @@ interface StoredEvent {
   headers: { [key: string]: string };
 }
 
-export const getLastEvent = async () => {
+const MAX_EVENTS = 10;
+const EVENTS_KEY = 'webhookEvents';
+
+export const getEvents = async () => {
   try {
-    console.log('Attempting to fetch event from Redis...');
-    const event = await redis.get<StoredEvent>('lastEvent');
-    console.log('Retrieved from Redis:', event);
+    console.log('Attempting to fetch events from Redis...');
+    const events = await redis.lrange<StoredEvent>(EVENTS_KEY, 0, MAX_EVENTS - 1);
+    console.log(`Retrieved ${events.length} events from Redis`);
     
-    if (!event) {
-      console.log('No event found in Redis');
-      return { event: null, timestamp: null };
+    if (!events || events.length === 0) {
+      console.log('No events found in Redis');
+      return { events: [] };
     }
     
     return {
-      event: event.payload,
-      timestamp: event.timestamp
+      events: events.map(event => ({
+        event: event.payload,
+        timestamp: event.timestamp
+      }))
     };
   } catch (error) {
-    console.error('Failed to retrieve event from Redis:', error);
-    return { event: null, timestamp: null };
+    console.error('Failed to retrieve events from Redis:', error);
+    return { events: [] };
   }
 };
 
@@ -53,8 +58,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log('Attempting to store event in Redis:', storedEvent);
     
-    // Store in Redis
-    await redis.set('lastEvent', storedEvent);
+    // Store in Redis at the start of the list
+    await redis.lpush(EVENTS_KEY, storedEvent);
+    // Trim to keep only the last MAX_EVENTS
+    await redis.ltrim(EVENTS_KEY, 0, MAX_EVENTS - 1);
+    
     console.log('Successfully stored event in Redis');
 
     return res.status(200).json({ 
