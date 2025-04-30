@@ -64,9 +64,6 @@ function renderLandingPage(req: VercelRequest): string {
             Login required to view webhook events.
         </p>
         <a href="/api/login" class="login-button" onclick="localStorage.removeItem('refreshCount');">Login to Dashboard</a>
-        <p>
-            Webhook endpoint: <code>${req.headers.host}/api/webhook</code>
-        </p>
     </div>
 </body>
 </html>`;

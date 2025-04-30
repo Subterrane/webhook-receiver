@@ -8,12 +8,14 @@ A secure TypeScript-based webhook receiver built for Vercel's serverless platfor
 - Protected dashboard with OneLogin OIDC authentication
 - Public webhook endpoint for receiving events
 - Secure headers and request validation
+- Redis-backed event storage
 - Detailed logging with timestamps
 - Error handling and proper HTTP status codes
 - Vercel serverless deployment ready
 - Auto-refreshing dashboard interface
 - User information display from OneLogin
 - Complete Single Sign-On (SSO) logout flow
+- Efficient OIDC token validation
 
 ## Prerequisites
 
@@ -21,6 +23,7 @@ A secure TypeScript-based webhook receiver built for Vercel's serverless platfor
 - npm (comes with Node.js)
 - A OneLogin account with admin access
 - A Vercel account
+- An Upstash account (free tier works)
 
 ## Setup
 
@@ -74,18 +77,32 @@ A secure TypeScript-based webhook receiver built for Vercel's serverless platfor
    - Client Secret
    - Issuer URL (usually `https://your-subdomain.onelogin.com/oidc/2`)
 
-### 4. Environment Variables Setup
+### 4. Upstash Redis Setup
+
+1. Create a free Redis database at [Upstash](https://upstash.com/)
+2. After creating your database, note down:
+   - REST URL
+   - REST Token
+
+These credentials will be needed in the next step.
+
+### 5. Environment Variables Setup
 
 Set up your environment variables in Vercel:
 
 ```bash
+# OneLogin Configuration
 npx vercel env add ONELOGIN_ISSUER      # Your OneLogin Issuer URL from SSO tab
 npx vercel env add ONELOGIN_CLIENT_ID    # Your OneLogin Client ID from SSO tab
 npx vercel env add ONELOGIN_CLIENT_SECRET # Your OneLogin Client Secret from SSO tab
 npx vercel env add VERCEL_URL_OVERRIDE   # Your production URL without https:// prefix
+
+# Redis Configuration
+npx vercel env add UPSTASH_REDIS_REST_URL   # Your Upstash Redis REST URL
+npx vercel env add UPSTASH_REDIS_REST_TOKEN # Your Upstash Redis REST Token
 ```
 
-### 5. Final Deployment
+### 6. Final Deployment
 
 Deploy to production:
 ```bash
@@ -150,9 +167,10 @@ Note: The webhook endpoint (`/api/webhook`) is public to receive events, but the
 
 ## Limitations
 
-- In-memory event storage (events are lost on deployment/restart)
-- Only shows the most recent event
+- Only shows the most recent event (historical events not stored)
 - Single user access (no user-specific event views)
+- Basic event format validation
+- No webhook signature validation yet
 
 ## Troubleshooting
 
